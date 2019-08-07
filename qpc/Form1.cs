@@ -27,6 +27,7 @@ namespace qpc
         uint buckets;
         Stopwatch sw = new Stopwatch();
         bool run = true;
+        decimal min, max;
 
         public Form1()
         {
@@ -44,11 +45,18 @@ namespace qpc
             chart1.ChartAreas[0].AxisX.MaximumAutoSize = 100;
             button1.Click += Button1_Click;
             button2.Click += Button2_Click;
+            button3.Click += Button3_Click;
             Build();
             displayTimer = new System.Timers.Timer();
             displayTimer.Interval = 100;
             displayTimer.Elapsed += Form1_Elapsed; ;
             displayTimer.Start();
+        }
+
+        private void Button3_Click(object sender, EventArgs e)
+        {
+            if (decimal.TryParse(textBox1.Text, out decimal d1)) { min = d1; } else { throw new ArgumentException($"The text {textBox1.Text} can not be converted to a decimal value."); }
+            if (decimal.TryParse(textBox2.Text, out decimal d2)) { max = d2; } else { throw new ArgumentException($"The text {textBox2.Text} can not be converted to a decimal value."); }
         }
 
         private void Button2_Click(object sender, EventArgs e)
@@ -69,13 +77,13 @@ namespace qpc
             run = true;
             for (int i = 0; i < 50; i++)
             {
-                Task.Run(() => { while (run) { AddData(new List<ulong> { GenRand() }); } });
+                Task.Run(() => { while (run) { AddData(new List<decimal> { GenRand() }); } });
             }
         }
 
         private void Form1_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            List<ulong> ld = GetData();
+            List<decimal> ld = GetData();
             int[] ba = GenHistoData(ld);
             if (ld.Count() > 0)
             {
@@ -141,23 +149,115 @@ namespace qpc
             //StartTimers();
         }
         // https://stackoverflow.com/questions/13447248/c-sharp-how-to-assign-listt-without-being-a-reference
-        private List<ulong> GetData() { lock (locker) { return new List<ulong>(rNumList); } }
+        private List<decimal> GetData() { lock (locker) { return new List<decimal>(rNumList); } }
         private void ClearData() { lock (locker) { rNumList.Clear(); } }
-        private void AddData(List<ulong> dataToAdd) { lock (locker) { rNumList.AddRange(dataToAdd); } }
-        private ulong GenRand()
+        private void AddData(List<decimal> dataToAdd) { lock (locker) { rNumList.AddRange(dataToAdd); } }
+        private int RequiredBits(decimal HiDec, decimal LowDec, byte maxScale)
         {
-            ulong dat = 0;
-            for (int i = 0; i < 64; i++)
+            decimal hd = HiDec * maxScale;
+            decimal ld = LowDec * maxScale;
+            decimal dif = hd - ld;
+            return (int)(Math.Log((double)dif, 2) + 1);
+        }
+        private byte MaxScale(decimal HiDec, decimal LowDec)
+        {
+            byte scale1 = BitConverter.GetBytes(decimal.GetBits(HiDec)[3])[2];
+            byte scale2 = BitConverter.GetBytes(decimal.GetBits(LowDec)[3])[2];
+            return Math.Max(scale1, scale2);
+        }
+        private decimal CreateMaxDecimalFromBitCount(int bits)
+        {
+            if (bits > 95) { throw new ArgumentException($"The number of bits, {bits} can not be converted to a decimal value."); }
+            int lo = 0;
+            int mid = 0;
+            int hi = 0;
+            bool sign = false;
+            byte scale = 0;
+            if (bits > 64)
+            { // 3 ints 2 ints full, 1 partial
+                lo = CreateMaxIntFromBitCount(32);
+                mid = CreateMaxIntFromBitCount(32);
+                hi = CreateMaxIntFromBitCount(bits - 64);
+            }
+            else if (bits > 32)
+            {// 2 ints 1 ints full, 1 partial
+                lo = CreateMaxIntFromBitCount(32);
+                mid = CreateMaxIntFromBitCount(bits - 32);
+                hi = CreateMaxIntFromBitCount(0);
+            }
+            else if (bits > 0)
+            { // 1 int, 1 partial
+                lo = CreateMaxIntFromBitCount(bits);
+                mid = CreateMaxIntFromBitCount(0);
+                hi = CreateMaxIntFromBitCount(0);
+            }
+            else { throw new ArgumentException($"The number of bits, {bits} can not be converted to a decimal value."); }
+            return new decimal(lo: lo, mid: mid, hi: hi, isNegative: sign, scale: scale);
+        }
+        private int CreateMaxIntFromBitCount(int bits)
+        {
+            if (bits < 1) { throw new ArgumentException($"The number of bits, {bits} can not be converted to a int value."); }
+            int returnValue = 1;
+            if (bits > 1) { for (int i = 0; i < bits - 1; i++) { returnValue = returnValue << 1; returnValue = returnValue | 1; } }
+            return returnValue;
+        }
+        private decimal GenRand(int bits)
+        {
+            // https://stackoverflow.com/questions/13477689/find-number-of-decimal-places-in-decimal-value-regardless-of-culture
+            //// decimal places
+            //decimal dVal = 456.789M;
+            //int[] parts = Decimal.GetBits(dVal);
+            //int lo = parts[0];
+            //int mid = parts[1];
+            //int hi = parts[2];
+            //bool sign = (parts[3] & 0x80000000) != 0;
+            //byte scale = (byte)((parts[3] >> 16) & 0x7F);
+            //scale = BitConverter.GetBytes(decimal.GetBits(dVal)[3])[2];
+            //decimal d = new decimal(lo: lo, mid: mid, hi: hi, isNegative: sign, scale: scale);
+
+            if (bits > 95) { throw new ArgumentException($"The number of bits, {bits} can not be converted to a decimal value."); }
+            int lo = 0;
+            int mid = 0;
+            int hi = 0;
+            bool sign = false;
+            byte scale = 0;
+            if (bits > 64)
+            { // 3 ints 2 ints full, 1 partial
+                lo = RandInt(32);
+                mid = RandInt(32);
+                hi = RandInt(bits - 64);
+            }
+            else if (bits > 32)
+            {// 2 ints 1 ints full, 1 partial
+                lo = RandInt(32);
+                mid = RandInt(bits - 32);
+                hi = RandInt(0);
+            }
+            else if (bits > 0)
+            { // 1 int, 1 partial
+                lo = RandInt(bits);
+                mid = RandInt(0);
+                hi = RandInt(0);
+            }
+            else { throw new ArgumentException($"The number of bits, {bits} can not be converted to a decimal value."); }
+
+            return new decimal(lo: lo, mid: mid, hi: hi, isNegative: sign, scale: scale);
+        }
+        private int RandInt(int bits)
+        {
+            if (bits > 32) { throw new ArgumentException($"The number of bits, {bits} can not be converted to a int value."); }
+            int dat = 0;
+            for (int i = 0; i < bits; i++)
             {
                 System.Threading.Thread.Sleep(1);
                 QueryPerformanceCounter(out long t);
-                ulong b = (ulong)(t & 1);
+                int b = (int)(t & 1);
                 dat = dat << 1;
                 dat = dat | b;
             }
             return dat;
         }
-        private int[] GenHistoData(List<ulong> ldata)
+        private int[] GenHistoData(List<decimal> ldata)
         {
             int[] bitbuckets = new int[buckets];
             //foreach (ulong l in ldata)
