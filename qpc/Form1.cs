@@ -149,11 +149,12 @@ namespace qpc
             //StartTimers();
         }
         // https://stackoverflow.com/questions/13447248/c-sharp-how-to-assign-listt-without-being-a-reference
+        // https://stackoverflow.com/users/2982/inisheer
         private List<decimal> GetData() { lock (locker) { return new List<decimal>(rNumList); } }
         private void ClearData() { lock (locker) { rNumList.Clear(); } }
         private void AddData(List<decimal> dataToAdd) { lock (locker) { rNumList.AddRange(dataToAdd); } }
         private int RequiredBits(decimal HiDec, decimal LowDec, byte maxScale)
-        {
+        { //https://docs.microsoft.com/en-us/dotnet/api/system.math.log?view=netframework-4.8#System_Math_Log_System_Double_System_Double_
             decimal hd = HiDec * maxScale;
             decimal ld = LowDec * maxScale;
             decimal dif = hd - ld;
@@ -161,6 +162,8 @@ namespace qpc
         }
         private byte MaxScale(decimal HiDec, decimal LowDec)
         {
+            // https://stackoverflow.com/questions/13477689/find-number-of-decimal-places-in-decimal-value-regardless-of-culture
+            // https://stackoverflow.com/users/1477076/burning-legion
             byte scale1 = BitConverter.GetBytes(decimal.GetBits(HiDec)[3])[2];
             byte scale2 = BitConverter.GetBytes(decimal.GetBits(LowDec)[3])[2];
             return Math.Max(scale1, scale2);
@@ -203,7 +206,7 @@ namespace qpc
         }
         private decimal GenRand(int bits)
         {
-            // https://stackoverflow.com/questions/13477689/find-number-of-decimal-places-in-decimal-value-regardless-of-culture
+
             //// decimal places
             //decimal dVal = 456.789M;
             //int[] parts = Decimal.GetBits(dVal);
