@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
+using System.Numerics;
 
 namespace qpc
 {
@@ -54,11 +55,14 @@ namespace qpc
         }
 
         private void Button3_Click(object sender, EventArgs e)
-        {
-            if (decimal.TryParse(textBox1.Text, out decimal d1)) { min = d1; } else { throw new ArgumentException($"The text {textBox1.Text} can not be converted to a decimal value."); }
-            if (decimal.TryParse(textBox2.Text, out decimal d2)) { max = d2; } else { throw new ArgumentException($"The text {textBox2.Text} can not be converted to a decimal value."); }
+        {// get size, offset and scale. return value number in the range unscaled and unoffseted?
+            if (decimal.TryParse(textBox1.Text, out decimal minDecInput)) { min = minDecInput; } else { throw new ArgumentException($"The text {textBox1.Text} can not be converted to a decimal value."); }
+            if (decimal.TryParse(textBox2.Text, out decimal maxDecInput)) { max = maxDecInput; } else { throw new ArgumentException($"The text {textBox2.Text} can not be converted to a decimal value."); }
+            decimal offset = minDecInput;
+            int maxScaleFactor = MaxScaleFactorFromDecimals(minDecInput, maxDecInput);
+            decimal dd1 = ScaleFromScaleFactor(maxScaleFactor) * minDecInput;
+            decimal dd2 = ScaleFromScaleFactor(maxScaleFactor) * maxDecInput;
         }
-
         private void Button2_Click(object sender, EventArgs e)
         {
             if (run)
@@ -111,22 +115,6 @@ namespace qpc
                 }
             }
         }
-
-        private void StartTimers()
-        {
-            //foreach (System.Timers.Timer t in ts)
-            //{
-            //    t.Start();
-            //}
-        }
-        private void StopTimers()
-        {
-            //foreach (System.Timers.Timer t in ts)
-            //{
-            //    t.Start();
-            //}
-        }
-
         private void Button1_Click(object sender, EventArgs e)
         {
             //StopTimers();
@@ -160,50 +148,40 @@ namespace qpc
             decimal dif = hd - ld;
             return (int)(Math.Log((double)dif, 2) + 1);
         }
-        private byte MaxScale(decimal HiDec, decimal LowDec)
+        //private decimal ScaleFromScaleFactor(int scale)
+        //{
+        //    return (ulong)Math.Pow(10, scale);
+        //}
+        //private byte GetScale(decimal dVal)
+        //{
+        //    return BitConverter.GetBytes(Decimal.GetBits(dVal)[3])[2];
+        //}
+        private ulong GetScaleFromDec(decimal dVal)
         {
             // https://stackoverflow.com/questions/13477689/find-number-of-decimal-places-in-decimal-value-regardless-of-culture
             // https://stackoverflow.com/users/1477076/burning-legion
-            byte scale1 = BitConverter.GetBytes(decimal.GetBits(HiDec)[3])[2];
-            byte scale2 = BitConverter.GetBytes(decimal.GetBits(LowDec)[3])[2];
-            return Math.Max(scale1, scale2);
+            return (ulong)Math.Pow(10, BitConverter.GetBytes(Decimal.GetBits(dVal)[3])[2]);
         }
-        private decimal CreateMaxDecimalFromBitCount(int bits)
+        /// <summary>Returns the minimum amount of binary digits needed to represent the value</summary>
+        private int MinBiDigits(decimal dVal)
         {
-            if (bits > 95) { throw new ArgumentException($"The number of bits, {bits} can not be converted to a decimal value."); }
-            int lo = 0;
-            int mid = 0;
-            int hi = 0;
-            bool sign = false;
-            byte scale = 0;
-            if (bits > 64)
-            { // 3 ints 2 ints full, 1 partial
-                lo = CreateMaxIntFromBitCount(32);
-                mid = CreateMaxIntFromBitCount(32);
-                hi = CreateMaxIntFromBitCount(bits - 64);
-            }
-            else if (bits > 32)
-            {// 2 ints 1 ints full, 1 partial
-                lo = CreateMaxIntFromBitCount(32);
-                mid = CreateMaxIntFromBitCount(bits - 32);
-                hi = CreateMaxIntFromBitCount(0);
-            }
-            else if (bits > 0)
-            { // 1 int, 1 partial
-                lo = CreateMaxIntFromBitCount(bits);
-                mid = CreateMaxIntFromBitCount(0);
-                hi = CreateMaxIntFromBitCount(0);
-            }
-            else { throw new ArgumentException($"The number of bits, {bits} can not be converted to a decimal value."); }
-            return new decimal(lo: lo, mid: mid, hi: hi, isNegative: sign, scale: scale);
+            int digits = 1;
+            while (CreateMaxDecimalFromBitCount(digits) < dVal) { digits++; }
+            return digits;
         }
-        private int CreateMaxIntFromBitCount(int bits)
-        {
-            if (bits < 1) { throw new ArgumentException($"The number of bits, {bits} can not be converted to a int value."); }
-            int returnValue = 1;
-            if (bits > 1) { for (int i = 0; i < bits - 1; i++) { returnValue = returnValue << 1; returnValue = returnValue | 1; } }
-            return returnValue;
-        }
+        //private ulong Dmax(ulong d1, ulong d2)
+        //{
+        //    return Math.Max(d1, d2);
+        //}
+        //private byte MaxScaleFactorFromDecimals(decimal HiDec, decimal LowDec)
+        //{
+        //    return Math.Max(GetScaleFactorFromDecimal(HiDec), GetScaleFactorFromDecimal(LowDec));
+        //}
+        //private byte GetScaleFactorFromDecimal(decimal dVal)
+        //{
+        //    return BitConverter.GetBytes(Decimal.GetBits(dVal)[3])[2];
+        //}
+        #region genrand
         private decimal GenRand(int bits)
         {
 
@@ -223,7 +201,7 @@ namespace qpc
             int mid = 0;
             int hi = 0;
             bool sign = false;
-            byte scale = 0;
+            byte scaleFactor = 0;
             if (bits > 64)
             { // 3 ints 2 ints full, 1 partial
                 lo = RandInt(32);
@@ -244,13 +222,14 @@ namespace qpc
             }
             else { throw new ArgumentException($"The number of bits, {bits} can not be converted to a decimal value."); }
 
-            return new decimal(lo: lo, mid: mid, hi: hi, isNegative: sign, scale: scale);
+            return new decimal(lo: lo, mid: mid, hi: hi, isNegative: sign, scale: scaleFactor);
         }
         private int RandInt(int bits)
         {
+            if (bits < 1) { return 0; }
             if (bits > 32) { throw new ArgumentException($"The number of bits, {bits} can not be converted to a int value."); }
             int dat = 0;
-            for (int i = 0; i < bits; i++)
+            for (int i = 0; i < bits; i++) // bit indexes 0 - 31
             {
                 System.Threading.Thread.Sleep(1);
                 QueryPerformanceCounter(out long t);
@@ -260,6 +239,8 @@ namespace qpc
             }
             return dat;
         }
+        #endregion
+        #region histo
         private int[] GenHistoData(List<decimal> ldata)
         {
             int[] bitbuckets = new int[buckets];
@@ -273,7 +254,47 @@ namespace qpc
             return bitbuckets;
         }
 
+        #endregion
+        #region create max decimal for x bits
+        private decimal CreateMaxDecimalFromBitCount(int bits)
+        {
+            if (bits > 95) { throw new ArgumentException($"The number of bits, {bits} can not be converted to a decimal value."); }
+            int lo = 0;
+            int mid = 0;
+            int hi = 0;
+            bool sign = false;
+            byte scaleFactor = 0;
+            if (bits > 64)
+            { // 3 ints 2 ints full, 1 partial
+                lo = CreateMaxIntFromBitCount(32);
+                mid = CreateMaxIntFromBitCount(32);
+                hi = CreateMaxIntFromBitCount(bits - 64);
+            }
+            else if (bits > 32)
+            {// 2 ints 1 ints full, 1 partial
+                lo = CreateMaxIntFromBitCount(32);
+                mid = CreateMaxIntFromBitCount(bits - 32);
+                hi = CreateMaxIntFromBitCount(0);
+            }
+            else if (bits > 0)
+            { // 1 int, 1 partial
+                lo = CreateMaxIntFromBitCount(bits);
+                mid = CreateMaxIntFromBitCount(0);
+                hi = CreateMaxIntFromBitCount(0);
+            }
+            else { throw new ArgumentException($"The number of bits, {bits} can not be converted to a decimal value."); }
+            return new decimal(lo: lo, mid: mid, hi: hi, isNegative: sign, scale: scaleFactor);
+        }
+        private int CreateMaxIntFromBitCount(int bits)
+        {
+            if (bits < 1) { return 0; }
+            int returnValue = 1;
+            if (bits > 1) { for (int i = 0; i < bits - 1; i++) { returnValue = returnValue << 1; returnValue = returnValue | 1; } }
+            return returnValue;
+        }
+        #endregion
 
+        #region set
         public void Set(Control c, Action a)
         {
             if (c != null && !c.IsDisposed && c.IsHandleCreated)
@@ -288,5 +309,6 @@ namespace qpc
                 }
             }
         }
+        #endregion
     }
 }
