@@ -77,7 +77,7 @@ namespace qpc
             run = true;
             for (int i = 0; i < 50; i++)
             {
-                Task.Run(() => { while (run) { AddData(new List<decimal> { GenRand() }); } });
+                Task.Run(() => { while (run) { AddData(new List<decimal> { GenRand(32) }); } });
             }
         }
 
