@@ -15,20 +15,21 @@ namespace qpc
 {
     public partial class Form1 : Form
     {
-        //private System.Timers.Timer[] ts = new System.Timers.Timer[1000];
         private System.Timers.Timer displayTimer = new System.Timers.Timer();
 
         [DllImport("kernel32.dll", SetLastError = false)]
         private static extern bool QueryPerformanceCounter(out long lpPerformanceCount);
 
-        //long time;
-        List<decimal> rNumList = new List<decimal>();
-        object locker = new object();
-        int bucketPower;
-        uint buckets;
-        Stopwatch sw = new Stopwatch();
-        bool run = true;
-        decimal min, max;
+        private List<decimal> rNumList = new List<decimal>();
+        private object locker = new object();
+        private int bucketPower;
+        private uint buckets;
+        private Stopwatch sw = new Stopwatch();
+        private bool run = true;
+
+        private decimal highRandLimit, offset;
+        private ulong multiplyer;
+        private int randBits;
 
         public Form1()
         {
@@ -37,7 +38,6 @@ namespace qpc
             buckets = (uint)1 << bucketPower;
             InitializeComponent();
         }
-
         private void Form1_Shown(object sender, EventArgs e)
         {
             sw.Start();
@@ -47,21 +47,28 @@ namespace qpc
             button1.Click += Button1_Click;
             button2.Click += Button2_Click;
             button3.Click += Button3_Click;
-            Build();
+            //Build();
             displayTimer = new System.Timers.Timer();
             displayTimer.Interval = 100;
             displayTimer.Elapsed += Form1_Elapsed; ;
             displayTimer.Start();
         }
-
         private void Button3_Click(object sender, EventArgs e)
         {// get size, offset and scale. return value number in the range unscaled and unoffseted?
-            if (decimal.TryParse(textBox1.Text, out decimal minDecInput)) { min = minDecInput; } else { throw new ArgumentException($"The text {textBox1.Text} can not be converted to a decimal value."); }
-            if (decimal.TryParse(textBox2.Text, out decimal maxDecInput)) { max = maxDecInput; } else { throw new ArgumentException($"The text {textBox2.Text} can not be converted to a decimal value."); }
-            decimal offset = minDecInput;
-            int maxScaleFactor = MaxScaleFactorFromDecimals(minDecInput, maxDecInput);
-            decimal dd1 = ScaleFromScaleFactor(maxScaleFactor) * minDecInput;
-            decimal dd2 = ScaleFromScaleFactor(maxScaleFactor) * maxDecInput;
+            if (!decimal.TryParse(textBox1.Text, out decimal input1)) { throw new ArgumentException($"The text {textBox1.Text} can not be converted to a decimal value."); }
+            if (!decimal.TryParse(textBox2.Text, out decimal input2)) { throw new ArgumentException($"The text {textBox2.Text} can not be converted to a decimal value."); }
+            decimal minDec = Math.Min(input1, input2);
+            decimal maxDec = Math.Max(input1, input2);
+            offset = minDec; // to use to offset value back to the desired range.
+            multiplyer = Math.Max(GetScaleFromDec(minDec), GetScaleFromDec(maxDec)); // used to shift all the values into the integer range
+            highRandLimit = (maxDec - minDec) * multiplyer; // the minimum value to compare to the random value to eliminate values outside of the desired range.
+            randBits = MinBiDigits(highRandLimit); // calculate the size of the binary number to generate with the random number generator.
+
+            // calculate random number
+            // remove if value is over highRandLimit
+            // divide by multiplyer
+            // add multiplyer
+
         }
         private void Button2_Click(object sender, EventArgs e)
         {
@@ -73,7 +80,6 @@ namespace qpc
             {
                 Build();
             }
-
         }
 
         private void Build()
@@ -136,6 +142,7 @@ namespace qpc
             Build();
             //StartTimers();
         }
+
         // https://stackoverflow.com/questions/13447248/c-sharp-how-to-assign-listt-without-being-a-reference
         // https://stackoverflow.com/users/2982/inisheer
         private List<decimal> GetData() { lock (locker) { return new List<decimal>(rNumList); } }
@@ -148,14 +155,6 @@ namespace qpc
             decimal dif = hd - ld;
             return (int)(Math.Log((double)dif, 2) + 1);
         }
-        //private decimal ScaleFromScaleFactor(int scale)
-        //{
-        //    return (ulong)Math.Pow(10, scale);
-        //}
-        //private byte GetScale(decimal dVal)
-        //{
-        //    return BitConverter.GetBytes(Decimal.GetBits(dVal)[3])[2];
-        //}
         private ulong GetScaleFromDec(decimal dVal)
         {
             // https://stackoverflow.com/questions/13477689/find-number-of-decimal-places-in-decimal-value-regardless-of-culture
@@ -169,6 +168,15 @@ namespace qpc
             while (CreateMaxDecimalFromBitCount(digits) < dVal) { digits++; }
             return digits;
         }
+
+        //private decimal ScaleFromScaleFactor(int scale)
+        //{
+        //    return (ulong)Math.Pow(10, scale);
+        //}
+        //private byte GetScale(decimal dVal)
+        //{
+        //    return BitConverter.GetBytes(Decimal.GetBits(dVal)[3])[2];
+        //}
         //private ulong Dmax(ulong d1, ulong d2)
         //{
         //    return Math.Max(d1, d2);
@@ -181,6 +189,7 @@ namespace qpc
         //{
         //    return BitConverter.GetBytes(Decimal.GetBits(dVal)[3])[2];
         //}
+
         #region genrand
         private decimal GenRand(int bits)
         {
