@@ -20,7 +20,7 @@ namespace qpc
         [DllImport("kernel32.dll", SetLastError = false)]
         private static extern bool QueryPerformanceCounter(out long lpPerformanceCount);
 
-        private List<decimal> rNumList = new List<decimal>();
+        private LockListClass<decimal> rNumList = new LockListClass<decimal>();
         private object locker = new object();
         private int bucketPower;
         private uint buckets;
@@ -49,7 +49,7 @@ namespace qpc
             button3.Click += Button3_Click;
             //Build();
             displayTimer = new System.Timers.Timer();
-            displayTimer.Interval = 100;
+            displayTimer.Interval = 500;
             displayTimer.Elapsed += Form1_Elapsed; ;
             displayTimer.Start();
         }
@@ -85,17 +85,28 @@ namespace qpc
         private void Build()
         {
             run = true;
-            for (int i = 0; i < 50; i++)
+            for (int i = 0; i < 1; i++)
             {
-                Task.Run(() => { while (run) { AddData(new List<decimal> { GenRand(32) }); } });
+                Task.Run(() =>
+                {
+                    while (run)
+                    {
+                        AddData(GenRand(randBits));
+                    }
+                });
             }
         }
-
+        #region graph
+        List<decimal> displayList = new List<decimal>();
+        int[] ba;
         private void Form1_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            List<decimal> ld = GetData();
-            int[] ba = GenHistoData(ld);
-            if (ld.Count() > 0)
+            lock (locker)
+            {
+                List<decimal> displayList = rNumList.Copy(); // GetData();
+                ba = GenHistoData(displayList);
+            }
+            if (displayList.Count() > 0)
             {
                 try
                 {
@@ -113,14 +124,31 @@ namespace qpc
                     Set(chart1, () =>
                     {
                         chart1.Update();
-                        label8.Text = ld.Min().ToString();
-                        label9.Text = ld.Max().ToString();
-                        label4.Text = ld.Count.ToString();
-                        //label1.Text = time.ToString();
-                    });
+                        label8.Text = displayList.Min().ToString();
+                        label9.Text = displayList.Max().ToString();
+                        label4.Text = displayList.Count.ToString();
+                            //label1.Text = time.ToString();
+                        });
                 }
             }
         }
+        #region histo
+        int[] bitbuckets = new int[1024];
+        private int[] GenHistoData(List<decimal> ldata)
+        {
+            if (ldata.Count > 1024) { }
+            //bitbuckets = new int[buckets];
+            foreach (ulong l in ldata)
+            {
+                ulong bucketSize = ulong.MaxValue / (buckets - 1);
+                int index = (int)(l / bucketSize);
+                //if (bitbuckets[index] > 1) Debug.Print($"val = {Convert.ToString(l, toBase: 2), 32}"); 
+                bitbuckets[index]++;
+            }
+            return bitbuckets;
+        }
+        #endregion
+        #endregion
         private void Button1_Click(object sender, EventArgs e)
         {
             //StopTimers();
@@ -145,16 +173,10 @@ namespace qpc
 
         // https://stackoverflow.com/questions/13447248/c-sharp-how-to-assign-listt-without-being-a-reference
         // https://stackoverflow.com/users/2982/inisheer
-        private List<decimal> GetData() { lock (locker) { return new List<decimal>(rNumList); } }
+        private List<decimal> GetData() {  return rNumList.Copy(); }
         private void ClearData() { lock (locker) { rNumList.Clear(); } }
+        private void AddData(decimal dataToAdd) { lock (locker) { rNumList.Add(dataToAdd); } }
         private void AddData(List<decimal> dataToAdd) { lock (locker) { rNumList.AddRange(dataToAdd); } }
-        private int RequiredBits(decimal HiDec, decimal LowDec, byte maxScale)
-        { //https://docs.microsoft.com/en-us/dotnet/api/system.math.log?view=netframework-4.8#System_Math_Log_System_Double_System_Double_
-            decimal hd = HiDec * maxScale;
-            decimal ld = LowDec * maxScale;
-            decimal dif = hd - ld;
-            return (int)(Math.Log((double)dif, 2) + 1);
-        }
         private ulong GetScaleFromDec(decimal dVal)
         {
             // https://stackoverflow.com/questions/13477689/find-number-of-decimal-places-in-decimal-value-regardless-of-culture
@@ -169,6 +191,13 @@ namespace qpc
             return digits;
         }
 
+        //private int RequiredBits(decimal HiDec, decimal LowDec, byte maxScale)
+        //{ //https://docs.microsoft.com/en-us/dotnet/api/system.math.log?view=netframework-4.8#System_Math_Log_System_Double_System_Double_
+        //    decimal hd = HiDec * maxScale;
+        //    decimal ld = LowDec * maxScale;
+        //    decimal dif = hd - ld;
+        //    return (int)(Math.Log((double)dif, 2) + 1);
+        //}
         //private decimal ScaleFromScaleFactor(int scale)
         //{
         //    return (ulong)Math.Pow(10, scale);
@@ -249,21 +278,8 @@ namespace qpc
             return dat;
         }
         #endregion
-        #region histo
-        private int[] GenHistoData(List<decimal> ldata)
-        {
-            int[] bitbuckets = new int[buckets];
-            //foreach (ulong l in ldata)
-            //{
-            //    ulong bucketSize = ulong.MaxValue / (buckets - 1);
-            //    int index = (int)(l / bucketSize);
-            //    //if (bitbuckets[index] > 1) Debug.Print($"val = {Convert.ToString(l, toBase: 2), 32}"); 
-            //    bitbuckets[index]++;
-            //}
-            return bitbuckets;
-        }
 
-        #endregion
+
         #region create max decimal for x bits
         private decimal CreateMaxDecimalFromBitCount(int bits)
         {
