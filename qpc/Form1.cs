@@ -28,7 +28,7 @@ namespace qpc
         private bool run = true;
 
         private decimal highRandLimit, offset;
-        private ulong multiplyer;
+        private ulong multiplyer, count;
         private int randBits;
 
         public Form1()
