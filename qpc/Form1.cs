@@ -21,20 +21,21 @@ namespace qpc
         private static extern bool QueryPerformanceCounter(out long lpPerformanceCount);
 
         private LockListClass<decimal> rNumList = new LockListClass<decimal>();
-        private object locker = new object();
+
         private int bucketPower;
         private uint buckets;
+
         private Stopwatch sw = new Stopwatch();
-        private bool run = true;
+        private bool run = false;
 
         private decimal highRandLimit, offset;
-        private ulong multiplyer, count;
-        private int randBits;
+        private ulong multiplyer;
+        private int randBits, count;
 
         public Form1()
         {
             this.Shown += Form1_Shown;
-            bucketPower = 16;
+            bucketPower = 10;
             buckets = (uint)1 << bucketPower;
             InitializeComponent();
         }
@@ -57,17 +58,19 @@ namespace qpc
         {// get size, offset and scale. return value number in the range unscaled and unoffseted?
             if (!decimal.TryParse(textBox1.Text, out decimal input1)) { throw new ArgumentException($"The text {textBox1.Text} can not be converted to a decimal value."); }
             if (!decimal.TryParse(textBox2.Text, out decimal input2)) { throw new ArgumentException($"The text {textBox2.Text} can not be converted to a decimal value."); }
+            if (!int.TryParse(textBox3.Text, out int input3)) { throw new ArgumentException($"The text {textBox3.Text} can not be converted to a integer value."); }
             decimal minDec = Math.Min(input1, input2);
             decimal maxDec = Math.Max(input1, input2);
+            count = input3;
             offset = minDec; // to use to offset value back to the desired range.
             multiplyer = Math.Max(GetScaleFromDec(minDec), GetScaleFromDec(maxDec)); // used to shift all the values into the integer range
             highRandLimit = (maxDec - minDec) * multiplyer; // the minimum value to compare to the random value to eliminate values outside of the desired range.
             randBits = MinBiDigits(highRandLimit); // calculate the size of the binary number to generate with the random number generator.
 
+            // clear data
+            ClearData();
             // calculate random number
-            // remove if value is over highRandLimit
-            // divide by multiplyer
-            // add multiplyer
+            Build();
 
         }
         private void Button2_Click(object sender, EventArgs e)
@@ -84,16 +87,24 @@ namespace qpc
 
         private void Build()
         {
-            run = true;
-            for (int i = 0; i < 1; i++)
+            if (!run)
             {
-                Task.Run(() =>
+                run = true;
+                for (int i = 0; i < 1; i++) // One instance
                 {
-                    while (run)
+                    Task.Run(() =>
                     {
-                        AddData(GenRand(randBits));
-                    }
-                });
+                        while (run & rNumList.Count() < count)
+                        {
+                            decimal d = GenRand(randBits);
+                            if (d <= highRandLimit && d >= 0m)
+                            {
+                                decimal d2 = (d / multiplyer) + offset;
+                                AddData(d2);
+                            }
+                        }
+                    });
+                }
             }
         }
         #region graph
@@ -101,11 +112,8 @@ namespace qpc
         int[] ba;
         private void Form1_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            lock (locker)
-            {
-                List<decimal> displayList = rNumList.Copy(); // GetData();
-                ba = GenHistoData(displayList);
-            }
+            List<decimal> displayList = rNumList.Copy();
+            ba = GenHistoData(displayList);
             if (displayList.Count() > 0)
             {
                 try
@@ -127,8 +135,8 @@ namespace qpc
                         label8.Text = displayList.Min().ToString();
                         label9.Text = displayList.Max().ToString();
                         label4.Text = displayList.Count.ToString();
-                            //label1.Text = time.ToString();
-                        });
+                        //label1.Text = time.ToString();
+                    });
                 }
             }
         }
@@ -173,10 +181,10 @@ namespace qpc
 
         // https://stackoverflow.com/questions/13447248/c-sharp-how-to-assign-listt-without-being-a-reference
         // https://stackoverflow.com/users/2982/inisheer
-        private List<decimal> GetData() {  return rNumList.Copy(); }
-        private void ClearData() { lock (locker) { rNumList.Clear(); } }
-        private void AddData(decimal dataToAdd) { lock (locker) { rNumList.Add(dataToAdd); } }
-        private void AddData(List<decimal> dataToAdd) { lock (locker) { rNumList.AddRange(dataToAdd); } }
+        private List<decimal> GetData() { return rNumList.Copy(); }
+        private void ClearData() { rNumList.Clear(); }
+        private void AddData(decimal dataToAdd) { rNumList.Add(dataToAdd); }
+        private void AddData(List<decimal> dataToAdd) { rNumList.AddRange(dataToAdd); }
         private ulong GetScaleFromDec(decimal dVal)
         {
             // https://stackoverflow.com/questions/13477689/find-number-of-decimal-places-in-decimal-value-regardless-of-culture
@@ -260,7 +268,8 @@ namespace qpc
             }
             else { throw new ArgumentException($"The number of bits, {bits} can not be converted to a decimal value."); }
 
-            return new decimal(lo: lo, mid: mid, hi: hi, isNegative: sign, scale: scaleFactor);
+            decimal d = new decimal(lo: lo, mid: mid, hi: hi, isNegative: sign, scale: scaleFactor);
+            return d;
         }
         private int RandInt(int bits)
         {

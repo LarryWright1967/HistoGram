@@ -31,7 +31,7 @@ namespace qpc
         }
         public void AddRange(List<T> items)
         {
-            tList.Add(items);
+            tList.AddRange(items);
         }
         public int Count()
         {
