@@ -22,21 +22,19 @@ namespace qpc
 
         private LockListClass<decimal> rNumList = new LockListClass<decimal>();
 
-        private int bucketPower;
-        private uint buckets;
-
         private Stopwatch sw = new Stopwatch();
         private bool run = false;
 
-        private decimal highRandLimit, offset;
-        private ulong multiplyer;
-        private int randBits, count;
+        private decimal highRandLimit;
+        private int count;
+        int bucketCount;
+        int[] bitbuckets;
+
+        private RandStruct RandStruct1;
 
         public Form1()
         {
             this.Shown += Form1_Shown;
-            bucketPower = 10;
-            buckets = (uint)1 << bucketPower;
             InitializeComponent();
         }
         private void Form1_Shown(object sender, EventArgs e)
@@ -44,7 +42,7 @@ namespace qpc
             sw.Start();
             //chart1.ChartAreas[0].AxisX.Maximum = 255;
             //chart1.ChartAreas[0].AxisX.Minimum = 0;
-            chart1.ChartAreas[0].AxisX.MaximumAutoSize = 100;
+            //chart1.ChartAreas[0].AxisX.MaximumAutoSize = 100;
             button1.Click += Button1_Click;
             button2.Click += Button2_Click;
             button3.Click += Button3_Click;
@@ -58,14 +56,11 @@ namespace qpc
         {// get size, offset and scale. return value number in the range unscaled and unoffseted?
             if (!decimal.TryParse(textBox1.Text, out decimal input1)) { throw new ArgumentException($"The text {textBox1.Text} can not be converted to a decimal value."); }
             if (!decimal.TryParse(textBox2.Text, out decimal input2)) { throw new ArgumentException($"The text {textBox2.Text} can not be converted to a decimal value."); }
-            if (!int.TryParse(textBox3.Text, out int input3)) { throw new ArgumentException($"The text {textBox3.Text} can not be converted to a integer value."); }
-            decimal minDec = Math.Min(input1, input2);
-            decimal maxDec = Math.Max(input1, input2);
-            count = input3;
-            offset = minDec; // to use to offset value back to the desired range.
-            multiplyer = Math.Max(GetScaleFromDec(minDec), GetScaleFromDec(maxDec)); // used to shift all the values into the integer range
-            highRandLimit = (maxDec - minDec) * multiplyer; // the minimum value to compare to the random value to eliminate values outside of the desired range.
-            randBits = MinBiDigits(highRandLimit); // calculate the size of the binary number to generate with the random number generator.
+            RandStruct1 = new RandStruct(input1, input2);
+            if (!int.TryParse(textBox3.Text, out int countInput)) { throw new ArgumentException($"The text {textBox3.Text} can not be converted to a integer value."); }
+            count = countInput;
+            //if (buckets > 999) { buckets = 999; }
+            //bitbuckets = new int[(int)buckets];
 
             // clear data
             ClearData();
@@ -96,17 +91,18 @@ namespace qpc
                     {
                         while (run & rNumList.Count() < count)
                         {
-                            decimal d = GenRand(randBits);
+                            decimal d = RandStruct1.GetRand();
                             if (d <= highRandLimit && d >= 0m)
                             {
-                                decimal d2 = (d / multiplyer) + offset;
-                                AddData(d2);
+                                //decimal d2 = (d / multiplyer) + offset;
+                                AddData(d);
                             }
                         }
                     });
                 }
             }
         }
+
         #region graph
         List<decimal> displayList = new List<decimal>();
         int[] ba;
@@ -123,6 +119,12 @@ namespace qpc
                         chart1.Series[0].Points.Clear();
                         for (int i = 0; i < buckets; i++)
                         {
+                            //double bucketSize = (double)(range / (bitbuckets.Length - 1));
+                            //decimal xVal = (int)(((ulong)i / multiplyer) / bucketSize); // (decimal)i / (decimal)multiplyer + offset;
+                            if ((int)(i / 50) == i / 50.0)
+                            {
+                                int kkls = 12;
+                            }
                             chart1.Series[0].Points.AddXY(i, ba[i]);
                         }
                     });
@@ -140,43 +142,45 @@ namespace qpc
                 }
             }
         }
+
         #region histo
-        int[] bitbuckets = new int[1024];
         private int[] GenHistoData(List<decimal> ldata)
         {
-            if (ldata.Count > 1024) { }
-            //bitbuckets = new int[buckets];
-            foreach (ulong l in ldata)
+            bucketCount = (int)(RandStruct1.valueRange * RandStruct1.multiplyer);
+            foreach (decimal d in rNumList.Copy())
             {
-                ulong bucketSize = ulong.MaxValue / (buckets - 1);
-                int index = (int)(l / bucketSize);
-                //if (bitbuckets[index] > 1) Debug.Print($"val = {Convert.ToString(l, toBase: 2), 32}"); 
-                bitbuckets[index]++;
+                bitbuckets[(int)(d * RandStruct1.multiplyer + RandStruct1.offset)]++;
             }
+            //if (range == 0) return new int[0];
+            //for (int i = 0; i < bitbuckets.Length; i++) { bitbuckets[i] = 0; }
+            //double bucketSize = (double)((bitbuckets.Length) / range);
+            //int c = 0;
+            //foreach (decimal l in ldata)
+            //{
+            //    c++;
+            //    int index = (int)((double)(l / multiplyer) * (bucketSize - 1.0));
+            //    //if (bitbuckets[index] > 1) Debug.Print($"val = {Convert.ToString(l, toBase: 2), 32}"); 
+            //    bitbuckets[index]++;
+            //    if ((int)(c / 100) == c / 100.0)
+            //    {
+            //        int kkls = 12;
+            //    }
+            //}
             return bitbuckets;
         }
         #endregion
         #endregion
+
         private void Button1_Click(object sender, EventArgs e)
         {
-            //StopTimers();
             run = false;
             Task.WaitAll();
             System.Threading.Thread.Sleep(250);
             Task.Run(() =>
             {
                 ClearData();
-                //for (int i = 0; i < 1024; i++) // foreach bitbucket
-                //{
-                //    //bitbuckets[i] = 0;
-                //    //count1 = 0;
-                //    //count2 = 0;
-                //    //num = 0;
-                //}
             });
             Task.WaitAll();
-            Build();
-            //StartTimers();
         }
 
         // https://stackoverflow.com/questions/13447248/c-sharp-how-to-assign-listt-without-being-a-reference
@@ -184,149 +188,6 @@ namespace qpc
         private List<decimal> GetData() { return rNumList.Copy(); }
         private void ClearData() { rNumList.Clear(); }
         private void AddData(decimal dataToAdd) { rNumList.Add(dataToAdd); }
-        private void AddData(List<decimal> dataToAdd) { rNumList.AddRange(dataToAdd); }
-        private ulong GetScaleFromDec(decimal dVal)
-        {
-            // https://stackoverflow.com/questions/13477689/find-number-of-decimal-places-in-decimal-value-regardless-of-culture
-            // https://stackoverflow.com/users/1477076/burning-legion
-            return (ulong)Math.Pow(10, BitConverter.GetBytes(Decimal.GetBits(dVal)[3])[2]);
-        }
-        /// <summary>Returns the minimum amount of binary digits needed to represent the value</summary>
-        private int MinBiDigits(decimal dVal)
-        {
-            int digits = 1;
-            while (CreateMaxDecimalFromBitCount(digits) < dVal) { digits++; }
-            return digits;
-        }
-
-        //private int RequiredBits(decimal HiDec, decimal LowDec, byte maxScale)
-        //{ //https://docs.microsoft.com/en-us/dotnet/api/system.math.log?view=netframework-4.8#System_Math_Log_System_Double_System_Double_
-        //    decimal hd = HiDec * maxScale;
-        //    decimal ld = LowDec * maxScale;
-        //    decimal dif = hd - ld;
-        //    return (int)(Math.Log((double)dif, 2) + 1);
-        //}
-        //private decimal ScaleFromScaleFactor(int scale)
-        //{
-        //    return (ulong)Math.Pow(10, scale);
-        //}
-        //private byte GetScale(decimal dVal)
-        //{
-        //    return BitConverter.GetBytes(Decimal.GetBits(dVal)[3])[2];
-        //}
-        //private ulong Dmax(ulong d1, ulong d2)
-        //{
-        //    return Math.Max(d1, d2);
-        //}
-        //private byte MaxScaleFactorFromDecimals(decimal HiDec, decimal LowDec)
-        //{
-        //    return Math.Max(GetScaleFactorFromDecimal(HiDec), GetScaleFactorFromDecimal(LowDec));
-        //}
-        //private byte GetScaleFactorFromDecimal(decimal dVal)
-        //{
-        //    return BitConverter.GetBytes(Decimal.GetBits(dVal)[3])[2];
-        //}
-
-        #region genrand
-        private decimal GenRand(int bits)
-        {
-
-            //// decimal places
-            //decimal dVal = 456.789M;
-            //int[] parts = Decimal.GetBits(dVal);
-            //int lo = parts[0];
-            //int mid = parts[1];
-            //int hi = parts[2];
-            //bool sign = (parts[3] & 0x80000000) != 0;
-            //byte scale = (byte)((parts[3] >> 16) & 0x7F);
-            //scale = BitConverter.GetBytes(decimal.GetBits(dVal)[3])[2];
-            //decimal d = new decimal(lo: lo, mid: mid, hi: hi, isNegative: sign, scale: scale);
-
-            if (bits > 95) { throw new ArgumentException($"The number of bits, {bits} can not be converted to a decimal value."); }
-            int lo = 0;
-            int mid = 0;
-            int hi = 0;
-            bool sign = false;
-            byte scaleFactor = 0;
-            if (bits > 64)
-            { // 3 ints 2 ints full, 1 partial
-                lo = RandInt(32);
-                mid = RandInt(32);
-                hi = RandInt(bits - 64);
-            }
-            else if (bits > 32)
-            {// 2 ints 1 ints full, 1 partial
-                lo = RandInt(32);
-                mid = RandInt(bits - 32);
-                hi = RandInt(0);
-            }
-            else if (bits > 0)
-            { // 1 int, 1 partial
-                lo = RandInt(bits);
-                mid = RandInt(0);
-                hi = RandInt(0);
-            }
-            else { throw new ArgumentException($"The number of bits, {bits} can not be converted to a decimal value."); }
-
-            decimal d = new decimal(lo: lo, mid: mid, hi: hi, isNegative: sign, scale: scaleFactor);
-            return d;
-        }
-        private int RandInt(int bits)
-        {
-            if (bits < 1) { return 0; }
-            if (bits > 32) { throw new ArgumentException($"The number of bits, {bits} can not be converted to a int value."); }
-            int dat = 0;
-            for (int i = 0; i < bits; i++) // bit indexes 0 - 31
-            {
-                System.Threading.Thread.Sleep(1);
-                QueryPerformanceCounter(out long t);
-                int b = (int)(t & 1);
-                dat = dat << 1;
-                dat = dat | b;
-            }
-            return dat;
-        }
-        #endregion
-
-
-        #region create max decimal for x bits
-        private decimal CreateMaxDecimalFromBitCount(int bits)
-        {
-            if (bits > 95) { throw new ArgumentException($"The number of bits, {bits} can not be converted to a decimal value."); }
-            int lo = 0;
-            int mid = 0;
-            int hi = 0;
-            bool sign = false;
-            byte scaleFactor = 0;
-            if (bits > 64)
-            { // 3 ints 2 ints full, 1 partial
-                lo = CreateMaxIntFromBitCount(32);
-                mid = CreateMaxIntFromBitCount(32);
-                hi = CreateMaxIntFromBitCount(bits - 64);
-            }
-            else if (bits > 32)
-            {// 2 ints 1 ints full, 1 partial
-                lo = CreateMaxIntFromBitCount(32);
-                mid = CreateMaxIntFromBitCount(bits - 32);
-                hi = CreateMaxIntFromBitCount(0);
-            }
-            else if (bits > 0)
-            { // 1 int, 1 partial
-                lo = CreateMaxIntFromBitCount(bits);
-                mid = CreateMaxIntFromBitCount(0);
-                hi = CreateMaxIntFromBitCount(0);
-            }
-            else { throw new ArgumentException($"The number of bits, {bits} can not be converted to a decimal value."); }
-            return new decimal(lo: lo, mid: mid, hi: hi, isNegative: sign, scale: scaleFactor);
-        }
-        private int CreateMaxIntFromBitCount(int bits)
-        {
-            if (bits < 1) { return 0; }
-            int returnValue = 1;
-            if (bits > 1) { for (int i = 0; i < bits - 1; i++) { returnValue = returnValue << 1; returnValue = returnValue | 1; } }
-            return returnValue;
-        }
-        #endregion
 
         #region set
         public void Set(Control c, Action a)
