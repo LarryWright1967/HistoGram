@@ -48,7 +48,7 @@ namespace qpc
             button3.Click += Button3_Click;
             //Build();
             displayTimer = new System.Timers.Timer();
-            displayTimer.Interval = 500;
+            displayTimer.Interval = 2000;
             displayTimer.Elapsed += Form1_Elapsed; ;
             displayTimer.Start();
         }
@@ -85,14 +85,14 @@ namespace qpc
             if (!run)
             {
                 run = true;
-                for (int i = 0; i < 1; i++) // One instance
+                for (int i = 0; i < 100; i++) // One instance
                 {
                     Task.Run(() =>
                     {
                         while (run & rNumList.Count() < count)
                         {
                             decimal d = RandStruct1.GetRand();
-                            if (d <= highRandLimit && d >= 0m)
+                            if (d <= (RandStruct1.valueRange * RandStruct1.multiplyer) && d >= 0m)
                             {
                                 //decimal d2 = (d / multiplyer) + offset;
                                 AddData(d);
@@ -117,7 +117,7 @@ namespace qpc
                     Set(chart1, () =>
                     {
                         chart1.Series[0].Points.Clear();
-                        for (int i = 0; i < buckets; i++)
+                        for (int i = 0; i < bucketCount; i++)
                         {
                             //double bucketSize = (double)(range / (bitbuckets.Length - 1));
                             //decimal xVal = (int)(((ulong)i / multiplyer) / bucketSize); // (decimal)i / (decimal)multiplyer + offset;
@@ -147,25 +147,11 @@ namespace qpc
         private int[] GenHistoData(List<decimal> ldata)
         {
             bucketCount = (int)(RandStruct1.valueRange * RandStruct1.multiplyer);
+            bitbuckets = new int[bucketCount+1];
             foreach (decimal d in rNumList.Copy())
             {
-                bitbuckets[(int)(d * RandStruct1.multiplyer + RandStruct1.offset)]++;
+                bitbuckets[(int)(d * RandStruct1.multiplyer)]++;
             }
-            //if (range == 0) return new int[0];
-            //for (int i = 0; i < bitbuckets.Length; i++) { bitbuckets[i] = 0; }
-            //double bucketSize = (double)((bitbuckets.Length) / range);
-            //int c = 0;
-            //foreach (decimal l in ldata)
-            //{
-            //    c++;
-            //    int index = (int)((double)(l / multiplyer) * (bucketSize - 1.0));
-            //    //if (bitbuckets[index] > 1) Debug.Print($"val = {Convert.ToString(l, toBase: 2), 32}"); 
-            //    bitbuckets[index]++;
-            //    if ((int)(c / 100) == c / 100.0)
-            //    {
-            //        int kkls = 12;
-            //    }
-            //}
             return bitbuckets;
         }
         #endregion

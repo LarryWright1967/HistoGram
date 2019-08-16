@@ -22,7 +22,7 @@ namespace qpc
         public decimal multiplyer { get; set; }
         public int minBits { get; set; }
         public decimal valueRange { get; set; }
-        decimal testResult, val1, val2, highVal, LowVal;
+        decimal /*testResult,*/ val1, val2, highVal, LowVal;
         public RandStruct(decimal val1, decimal val2)
         {
             this.val1 = val1;
@@ -30,7 +30,7 @@ namespace qpc
             maxVal = Math.Max(this.val1, this.val2);
             minVal = Math.Min(this.val1, this.val2);
             valueRange = maxVal - minVal;
-            testResult = 0m;
+            //testResult = 0m;
             offset = minVal;
             multiplyer = 0m;
             minBits = 0;
@@ -38,7 +38,7 @@ namespace qpc
             LowVal = 0m;
             highVal = GetMultiplyer(maxVal);
             LowVal = GetMultiplyer(minVal);
-            multiplyer = Math.Max(minVal, highVal);
+            multiplyer = Math.Max(LowVal, highVal);
             minBits = MinBiDigits(valueRange * multiplyer); // calculate the size of the binary number to generate with the random number generator.
         }
 
@@ -51,6 +51,7 @@ namespace qpc
 
         public decimal GetRand()
         {
+            decimal testResult;
             do
             {
                 do
@@ -65,7 +66,7 @@ namespace qpc
                 {
                     testResult = (testResult / multiplyer) + offset;
                 }
-            } while (testResult < minVal || testResult > maxVal);
+            } while (testResult < minVal || testResult > (maxVal-0));
             return testResult;
         }
 
