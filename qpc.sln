@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.29123.88
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "qpc", "qpc\qpc.csproj", "{654F30D0-7402-4255-A406-674B837D1048}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenRandDouble", "GenRandDouble\GenRandDouble.csproj", "{5A76DDD0-1CE6-48EB-8152-6C4E8545B476}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{654F30D0-7402-4255-A406-674B837D1048}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{654F30D0-7402-4255-A406-674B837D1048}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{654F30D0-7402-4255-A406-674B837D1048}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A76DDD0-1CE6-48EB-8152-6C4E8545B476}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A76DDD0-1CE6-48EB-8152-6C4E8545B476}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A76DDD0-1CE6-48EB-8152-6C4E8545B476}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A76DDD0-1CE6-48EB-8152-6C4E8545B476}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

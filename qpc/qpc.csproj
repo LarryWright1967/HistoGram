@@ -48,6 +48,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GenRandDouble.cs" />
     <Compile Include="Struct1.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
