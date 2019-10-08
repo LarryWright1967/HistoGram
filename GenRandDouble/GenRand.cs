@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace GenRandDouble
 {
-    public class Class1
+    public class GenRand
     {
     }
 }
