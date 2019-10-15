@@ -22,7 +22,7 @@ namespace GenRandDouble
         public int Multiplyer { get; set; }
         public int MinBits { get; set; }
         public double ValueRange { get; set; }
-        double /*testResult,*/ val1, val2, highVal, LowVal;
+        double  val1, val2, highVal, LowVal;
         public RandStruct(double val1, double val2)
         {
             this.val1 = val1;
@@ -38,8 +38,8 @@ namespace GenRandDouble
             LowVal = 0.0;
             highVal = GetMultiplyer(MaxVal);
             LowVal = GetMultiplyer(MinVal);
-            Multiplyer = Math.Max(LowVal, highVal);
-            MinBits = MinBiDigits(ValueRange * Multiplyer); // calculate the size of the binary number to generate with the random number generator.
+            Multiplyer = (int)Math.Max(LowVal, highVal);
+            MinBits = MinBiDigits((long)(ValueRange * (double)Multiplyer)); // calculate the size of the binary number to generate with the random number generator.
         }
 
         private double GetMultiplyer(double dVal)
@@ -49,9 +49,9 @@ namespace GenRandDouble
             return (double)Math.Pow(10, dVal);
         }
 
-        public decimal GetRand()
+        public double GetRand()
         {
-            decimal testResult;
+            double testResult;
             do
             {
                 do
@@ -71,15 +71,15 @@ namespace GenRandDouble
         }
 
         /// <summary>Returns the minimum amount of binary digits needed to represent the value</summary>
-        private int MinBiDigits(decimal dVal)
+        private int MinBiDigits(long lVal)
         {
             int digits = 1;
-            while (CreateMaxDecimalFromBitCount(digits) < dVal) { digits++; }
+            while (CreateMaxDecimalFromBitCount(digits) < lVal) { digits++; }
             return digits;
         }
 
         #region genrand
-        private decimal GenRand(int bits)
+        private double GenRand(int bits)
         {
 
             //// decimal places

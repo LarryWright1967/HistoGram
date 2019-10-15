@@ -1,19 +1,12 @@
-﻿using System;
+﻿
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace qpc
+namespace LockedList
 {
     class LockListClass<T>
     {
         private List<T> tList;
         private object tLock = new object();
-        //public LockListClass(LockListClass<T> inList)
-        //{
-        //    tList = new LockListClass<T>(inList);
-        //}
         public LockListClass(List<T> inList)
         {
             tList = new List<T>(inList);
@@ -31,13 +24,16 @@ namespace qpc
         }
         public void AddRange(List<T> items)
         {
-            tList.AddRange(items);
+            lock (tLock)
+            {
+                tList.AddRange(items);
+            }
         }
         public int Count()
         {
             lock (tLock)
             {
-                return tList.Count();
+                return tList.Count;
             }
         }
         public T GetItem(int index)
@@ -68,7 +64,5 @@ namespace qpc
                 return new List<T>(tList.GetRange(startIndex, count));
             }
         }
-        //private int NextIndex(int inVal) { int outVal = inVal++; if (outVal >= size) { outVal = 0; full = true; } return outVal; }
-        //private int PreviousIndex(int inVal) { int outVal = inVal--; if (outVal < 0) { outVal = (size - 1); } return outVal; }
     }
 }

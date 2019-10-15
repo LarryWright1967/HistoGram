@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "qpc", "qpc\qpc.csproj", "{6
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenRandDouble", "GenRandDouble\GenRandDouble.csproj", "{5A76DDD0-1CE6-48EB-8152-6C4E8545B476}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LockedList", "LockedList\LockedList.csproj", "{EC8BEB1B-CFF8-46D1-82AD-1D9A59804DD1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{5A76DDD0-1CE6-48EB-8152-6C4E8545B476}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5A76DDD0-1CE6-48EB-8152-6C4E8545B476}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5A76DDD0-1CE6-48EB-8152-6C4E8545B476}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EC8BEB1B-CFF8-46D1-82AD-1D9A59804DD1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EC8BEB1B-CFF8-46D1-82AD-1D9A59804DD1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EC8BEB1B-CFF8-46D1-82AD-1D9A59804DD1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EC8BEB1B-CFF8-46D1-82AD-1D9A59804DD1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
