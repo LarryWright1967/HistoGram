@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace LockedList
 {
-    class LockListClass<T>
+    public class LockListClass<T>
     {
         private List<T> tList;
         private object tLock = new object();

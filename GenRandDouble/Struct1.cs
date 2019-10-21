@@ -22,7 +22,7 @@ namespace GenRandDouble
         public int Multiplyer { get; set; }
         public int MinBits { get; set; }
         public double ValueRange { get; set; }
-        double  val1, val2, highVal, LowVal;
+        double val1, val2, highVal, LowVal;
         public RandStruct(double val1, double val2)
         {
             this.val1 = val1;
@@ -54,9 +54,13 @@ namespace GenRandDouble
             double testResult;
             do
             {
+                // binary values do not necessaryly match
+                // the same value range as the desired range.
+                // this function allows to discard values that
+                // are greater then the desired range.
                 do
                 {
-                    testResult = GenRand(MinBits);
+                    testResult = (double)GenRand(MinBits);
                 } while (testResult > (ValueRange * Multiplyer));
                 if (Multiplyer == 0)
                 {
@@ -66,7 +70,7 @@ namespace GenRandDouble
                 {
                     testResult = (testResult / Multiplyer) + Offset;
                 }
-            } while (testResult < MinVal || testResult > (MaxVal-0));
+            } while (testResult < MinVal || testResult > (MaxVal - 0));
             return testResult;
         }
 
@@ -79,7 +83,7 @@ namespace GenRandDouble
         }
 
         #region genrand
-        private double GenRand(int bits)
+        private decimal GenRand(int bits)
         {
 
             //// decimal places
